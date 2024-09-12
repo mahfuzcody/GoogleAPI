@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>googleSync</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: auto;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Add Contacts to Database</h2>
+
+    <button type="button" onclick="login()">Login</button>
+
+    <form id="contactForm">
+        <!-- Four input fields -->
+        <label for="first">First Name:</label>
+        <input type="text" id="first_name" name="first_name">
+
+        <label for="second">Last Name:</label>
+        <input type="text" id="last_name" name="last_name">
+
+        <label for="third">Email:</label>
+        <input type="text" id="email" name="email">
+
+        <label for="fourth">Contacts:</label>
+        <input type="text" id="contacts" name="contacts">
+
+        <!-- Add Contact button -->
+        <div class="buttons">
+            <button type="button" onclick="syncAction()">Add contacts</button>
+
+        </div>
+    </form>
+
+    <p>If you want to sync all database contacts to google account hit Sync button</p></br>
+    <!-- <button type="button" onclick="syncAction()">Database to google</button> -->
+
+    <script>
+
+        let token = '';
+        function addContacts() {
+            const formData = new FormData(document.getElementById('contactForm'));
+
+            const data = {
+                first_name: formData.get('first_name'),
+                last_name: formData.get('last_name'),
+                email: formData.get('email'),
+                contacts: formData.get('contacts')
+            };
+
+            fetch('/creates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.text())
+                .then(result => alert(result))
+                .catch(error => console.error('Error:', error));
+        }
+
+        async function syncAction() {
+
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+            const formData = new FormData(document.getElementById('contactForm'));
+
+            const data = [{
+                first_name: formData.get('first_name'),
+                last_name: formData.get('last_name'),
+                email: formData.get('email'),
+                contacts: formData.get('contacts'),
+                status: 0
+            }];
+            try {
+
+                // Assuming extractContactInfo is a function that processes the response data
+
+                const postResponse = await fetch('http://localhost:8080/api/creates/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`, // Include the access token in the Authorization header
+                    },
+                    body: JSON.stringify(data), // Convert contactInfo to a JSON string
+                });
+
+                if (!postResponse.ok) {
+                    throw new Error('Failed to send contact info');
+                }
+                const postResult = await postResponse.json(); // Parse the JSON response from the POST request
+                console.log('POST Response:', postResult);
+
+            } catch (error) {
+                console.error('Error fetching contact info:', error);
+                alert('Failed to sync contacts.');
+            }
+        }
+
+
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null; // Return null if cookie is not found
+        }
+
+        function login() {
+            // Redirect to login
+            location.replace("http://localhost:8080/login");
+        }
+
+        function getTokens() {
+            const url = new URL(window.location.href);
+
+            // Get the query parameters
+            const params = new URLSearchParams(url.search);
+
+            // Extract the access_token
+            const accessToken = params.get('access_token');
+
+            console.log(accessToken);
+            token = accessToken;
+        }
+
+        window.onload = function () {
+
+            // Optionally call getTokens here if you want to retrieve tokens immediately on page load
+            getTokens();
+        }
+        const extractContactInfo = (data) => {
+            const contacts = data.connections.map(connection => {
+                const name = connection.names[0]; // Assuming the first name object is the primary one
+                const email = connection.emailAddresses ? connection.emailAddresses[0].value : '';
+                const phone = connection.phoneNumbers ? connection.phoneNumbers[0].value : '';
+
+                return {
+                    last_name: name.familyName || '',
+                    first_name: name.givenName || '',
+                    contacts: phone,
+                    email: email,
+                    status: 0
+                };
+            });
+
+            return contacts;
+        };
+
+    </script>
+
+</body>
+
+</html>
