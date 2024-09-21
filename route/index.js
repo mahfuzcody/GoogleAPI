@@ -9,4 +9,6 @@ router.get('/creates', createContacts.getContacts)
 
 router.put('/creates/:id', createContacts.updateContacts)
 
+router.post('/sync-contacts', createContacts.syncContacts)
+
 module.exports = router

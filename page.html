@@ -61,6 +61,19 @@
             background-color: #0056b3;
         }
     </style>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css"
+        integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap-theme.min.css"
+        integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"
+        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"></script>
+
 </head>
 
 <body>
@@ -90,7 +103,25 @@
     </form>
 
     <p>If you want to sync all database contacts to google account hit Sync button</p></br>
+
+    <button type="button" onclick="sycUpdate()">SYNC/UPDATE</button>
     <!-- <button type="button" onclick="syncAction()">Database to google</button> -->
+    <h1> ALL contacts</h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Google ID</th>
+                <th scope="col">First Name</th>
+                <th scope="col">Last Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Contacts</th>
+            </tr>
+        </thead>
+        <tbody id="userTable">
+            <!-- Rows will be dynamically inserted here -->
+        </tbody>
+    </table>
 
     <script>
 
@@ -125,13 +156,13 @@
             }
             const formData = new FormData(document.getElementById('contactForm'));
 
-            const data = [{
+            const data = {
                 first_name: formData.get('first_name'),
                 last_name: formData.get('last_name'),
                 email: formData.get('email'),
                 contacts: formData.get('contacts'),
                 status: 0
-            }];
+            };
             try {
 
                 // Assuming extractContactInfo is a function that processes the response data
@@ -150,14 +181,46 @@
                 }
                 const postResult = await postResponse.json(); // Parse the JSON response from the POST request
                 console.log('POST Response:', postResult);
+                if (postResponse.ok) {
+                    alert('Successfully created');
+                }
 
             } catch (error) {
                 console.error('Error fetching contact info:', error);
                 alert('Failed to sync contacts.');
             }
         }
+        let syncDate;
+        async function sycUpdate() {
 
+            if (!syncDate) {
+                alert('Please reload your browser, RECORD NOT FOUND!');
+            }
+            try {
+                // Assuming extractContactInfo is a function that processes the response data
+                const postResponse = await fetch('http://localhost:8080/api/sync-contacts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`, // Include the access token in the Authorization header
+                    },
+                    body: JSON.stringify(syncDate), // Convert contactInfo to a JSON string
+                });
 
+                if (!postResponse.ok) {
+                    throw new Error('Failed to send contact info');
+                }
+                const postResult = await postResponse.json(); // Parse the JSON response from the POST request
+                console.log('POST Response:', postResult);
+                if (postResponse.ok) {
+                    alert('Successfully created');
+                }
+
+            } catch (error) {
+                console.error('Error fetching contact info:', error);
+                alert('Failed to sync contacts.');
+            }
+        }
 
         function getCookie(name) {
             const value = `; ${document.cookie}`;
@@ -173,19 +236,15 @@
 
         function getTokens() {
             const url = new URL(window.location.href);
-
             // Get the query parameters
             const params = new URLSearchParams(url.search);
-
             // Extract the access_token
             const accessToken = params.get('access_token');
-
-            console.log(accessToken);
             token = accessToken;
         }
 
         window.onload = function () {
-
+            fetchAndDisplayData();
             // Optionally call getTokens here if you want to retrieve tokens immediately on page load
             getTokens();
         }
@@ -206,6 +265,50 @@
 
             return contacts;
         };
+
+        // URL to fetch the data
+        const apiUrl = 'http://localhost:8080/api/creates';
+
+        // Function to fetch data and populate the table
+        async function fetchAndDisplayData() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                syncDate = data.data;
+
+                const userTable = document.getElementById('userTable');
+
+                // Clear the table first
+                userTable.innerHTML = '';
+
+                // Iterate over the response data and create rows
+                data?.data.forEach((user, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+        <th scope="row">${user.google_id}</th>
+        <td>${user.first_name}</td>
+        <td>${user.last_name}</td>
+        <td>${user.email}</td>
+        <td>${user.contacts}</td>
+      `;
+                    userTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Fetch and display data when the page loads
 
     </script>
 
